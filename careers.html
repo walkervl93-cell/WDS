@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Careers | WDS Inc</title>
+<meta name="description" content="Join the WDS team. Current openings in facilities maintenance, renovation, janitorial, and grounds services."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="index.html" class="logo">
+      <img src="assets/images/wds-logo.svg" alt="WDS Inc"/>
+    </a>
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="services.html">Services</a>
+      <a href="about.html">About</a>
+      <a href="careers.html" class="current">Careers</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="header-cta">
+      <a href="tel:18045902562" class="header-phone">(804) 590-2562</a>
+      <a href="contact.html" class="btn btn-outline-dark">Get an Estimate</a>
+      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">&#9776;</button>
+    </div>
+  </div>
+</header>
+
+<section class="page-hero">
+  <div class="container">
+    <span class="eyebrow" data-animate>Join Our Team</span>
+    <h1 data-animate>Build Your Career With WDS</h1>
+    <p class="lede">We're driven to improve the lives of our clients, our employees, and our community through leadership, excellence in craft, and attention to detail. Explore current openings below.</p>
+  </div>
+</section>
+
+<!--
+  JOB BOARD — structural placeholder.
+
+  This section renders whatever #job-list-mount is given by js/jobs.js.
+  Phase 2 wires this up to the admin-managed job listings (backend portal
+  where an admin logs in and adds/edits/removes postings). Until that
+  backend exists, js/jobs.js reads from JOBS below (empty for now) so the
+  page structure, empty state, and card layout can be reviewed as-is.
+-->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Current Openings</span>
+      <h2>Open Positions</h2>
+    </div>
+    <div id="job-list-mount"></div>
+  </div>
+</section>
+
+<section class="bg-light">
+  <div class="container">
+    <div class="section-head center">
+      <span class="eyebrow">Don't See A Fit?</span>
+      <h2>We're Always Looking For Great People</h2>
+      <p class="lede">Send us your resume and tell us what you do best &mdash; we'll reach out when a role opens up.</p>
+    </div>
+    <div style="text-align:center;">
+      <a href="mailto:info@wdsinc.net?subject=Career%20Inquiry" class="btn btn-primary">Email Your Resume</a>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer" id="site-footer"></footer>
+<script src="js/main.js"></script>
+<script src="js/footer.js"></script>
+<script src="js/jobs.js"></script>
+</body>
+</html>
