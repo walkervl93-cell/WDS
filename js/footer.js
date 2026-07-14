@@ -6,21 +6,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const mount = document.getElementById('site-footer');
   if (!mount) return;
 
+  // Pages nested under a subfolder (e.g. careers/handyman.html) set
+  // window.SITE_ROOT = '../' before including this script so the footer's
+  // root-relative links still resolve correctly.
+  const root = window.SITE_ROOT || '';
+
   mount.innerHTML = `
     <div class="container">
       <div class="footer-grid">
         <div>
-          <img class="footer-logo" src="assets/images/wds-logo-white.svg" alt="WDS Inc"/>
+          <img class="footer-logo" src="${root}assets/images/wds-logo-white.svg" alt="WDS Inc"/>
           <p>Our mission is to provide our customers with a single destination for their project needs while being prompt, doing the job right the first time, &amp; standing behind our work.</p>
         </div>
         <div>
           <h4>Services</h4>
           <ul>
-            <li><a href="services.html">Interior Design &amp; Renovation</a></li>
-            <li><a href="services.html">Exterior Design &amp; Renovation</a></li>
-            <li><a href="services.html">Janitorial Services</a></li>
-            <li><a href="services.html">Industrial Handyman Services</a></li>
-            <li><a href="services.html">Lawncare &amp; Irrigation</a></li>
+            <li><a href="${root}services.html">Interior Design &amp; Renovation</a></li>
+            <li><a href="${root}services.html">Exterior Design &amp; Renovation</a></li>
+            <li><a href="${root}services.html">Janitorial Services</a></li>
+            <li><a href="${root}services.html">Industrial Handyman Services</a></li>
+            <li><a href="${root}services.html">Lawncare &amp; Irrigation</a></li>
           </ul>
         </div>
         <div>

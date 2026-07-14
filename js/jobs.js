@@ -1,14 +1,15 @@
 // Job board.
 //
-// These two postings link straight into the scored application
-// questionnaire at careers/apply.html (see that file +
+// Clicking a listing opens its description page (careers/handyman.html,
+// careers/irrigation.html), which has its own Apply buttons leading into
+// the scored questionnaire at careers/apply.html (see that file +
 // careers/GOOGLE_SHEETS_SETUP.md for how submissions are stored).
 // Once there's an admin UI for managing postings, this static array gets
 // replaced with a fetch() against that backend.
 
 const JOBS = [
-  { title: 'General Handyman / Maintenance Technician', location: 'West Point, VA', type: 'Full-Time · $21–24/hr', applyHref: 'careers/apply.html?position=handyman' },
-  { title: 'Irrigation Technician', location: 'Chesterfield / Tri-Cities, VA', type: 'Full-Time · $21–24/hr', applyHref: 'careers/apply.html?position=irrigation' },
+  { title: 'General Handyman / Maintenance Technician', location: 'West Point, VA', type: 'Full-Time · $21–24/hr', detailHref: 'careers/handyman.html' },
+  { title: 'Irrigation Technician', location: 'Chesterfield / Tri-Cities, VA', type: 'Full-Time · $21–24/hr', detailHref: 'careers/irrigation.html' },
 ];
 
 function renderJobs() {
@@ -25,13 +26,15 @@ function renderJobs() {
   }
 
   mount.innerHTML = `<div class="job-list">${JOBS.map((job) => `
-    <div class="job-card">
-      <div>
-        <h3>${job.title}</h3>
-        <div class="job-meta">${job.location} &middot; ${job.type}</div>
+    <a class="job-card-link" href="${job.detailHref}">
+      <div class="job-card">
+        <div>
+          <h3>${job.title}</h3>
+          <div class="job-meta">${job.location} &middot; ${job.type}</div>
+        </div>
+        <span class="btn btn-outline-dark">View Details</span>
       </div>
-      <a href="${job.applyHref}" class="btn btn-primary">Apply</a>
-    </div>`).join('')}</div>`;
+    </a>`).join('')}</div>`;
 }
 
 document.addEventListener('DOMContentLoaded', renderJobs);
