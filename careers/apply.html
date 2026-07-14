@@ -179,6 +179,8 @@ tr:hover td{background:var(--paper-dim);}
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, collection, addDoc, getDocs, query, orderBy }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBUGM7_d08GixZbA1HOW1vCVtIhsGp9l_4",
@@ -192,6 +194,7 @@ tr:hover td{background:var(--paper-dim);}
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const storage = getStorage(app);
 
   window.__wdsFirebase = {
     onAuthChange: (cb) => onAuthStateChanged(auth, cb),
@@ -203,6 +206,20 @@ tr:hover td{background:var(--paper-dim);}
     loadApplications: async () => {
       const snap = await getDocs(query(collection(db, "applications"), orderBy("submittedAt", "desc")));
       return snap.docs.map(d => d.data());
+    },
+    // Applicants can upload but not read back (storage rules mirror the
+    // Firestore ones). Returns the storage path, not a public URL — the
+    // admin dashboard resolves a real download URL on demand, which only
+    // works while signed in as an allowlisted admin.
+    uploadResume: async (file, position) => {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `resumes/${position}/${Date.now()}_${safeName}`;
+      const fileRef = ref(storage, path);
+      await uploadBytes(fileRef, file, { contentType: file.type || "application/octet-stream" });
+      return path;
+    },
+    getResumeUrl: async (path) => {
+      return await getDownloadURL(ref(storage, path));
     }
   };
 </script>
@@ -375,8 +392,10 @@ async function notifyByEmail(record){
     "Score": `${record.score}/100 — ${record.tierLabel}`,
     "Phone": record.phone,
     "Email": record.email,
+    "Reference": record.reference ? [record.reference.name, record.reference.phone, record.reference.email].filter(Boolean).join(" · ") : "None",
+    "Resume": record.resumePath ? (record.resumeFileName || "attached") : "Not attached",
     "Flags": record.flags.length ? record.flags.join("; ") : "None",
-    "message": `${record.name} applied for ${record.positionLabel}.\n\nScore: ${record.score}/100 (${record.tierLabel})\nPhone: ${record.phone}\nEmail: ${record.email}\n\nFlags:\n${record.flags.length ? record.flags.map(f=>"- "+f).join("\n") : "None"}\n\nFull answers are saved in the application dashboard.`
+    "message": `${record.name} applied for ${record.positionLabel}.\n\nScore: ${record.score}/100 (${record.tierLabel})\nPhone: ${record.phone}\nEmail: ${record.email}\n\nReference: ${record.reference ? [record.reference.name, record.reference.phone, record.reference.email].filter(Boolean).join(" · ") : "None"}\nResume: ${record.resumePath ? (record.resumeFileName || "attached") : "Not attached"}\n\nFlags:\n${record.flags.length ? record.flags.map(f=>"- "+f).join("\n") : "None"}\n\nFull answers, including the resume, are in the application dashboard.`
   };
   try{
     const res = await fetch("https://api.web3forms.com/submit", {
@@ -439,6 +458,8 @@ function App(){
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitErr, setSubmitErr] = useState("");
 
   useEffect(()=>{
     if(window.location.hash === "#admin"){ setRoute("admin"); return; }
@@ -458,9 +479,9 @@ function App(){
   }
 
   const steps = position === "handyman"
-    ? ["contact","experience","skills","story","logistics"]
+    ? ["contact","experience","skills","story","logistics","documents"]
     : position === "irrigation"
-    ? ["contact","experience","skills","story","logistics"]
+    ? ["contact","experience","skills","story","logistics","documents"]
     : [];
 
   function validateStep(){
@@ -493,28 +514,61 @@ function App(){
       if(position==="irrigation" && !answers.certification) req.certification = "Select an option.";
       if(position==="irrigation" && !answers.bookOfBusiness) req.bookOfBusiness = "Select an option.";
     }
+    if(s === "documents"){
+      if(!(answers.refName||"").trim()) req.refName = "Enter a reference name.";
+      if(!(answers.refPhone||"").trim()) req.refPhone = "Enter a reference phone number.";
+      if(!(answers.refEmail||"").trim()) req.refEmail = "Enter a reference email address.";
+      if(!answers.resumeFile) req.resumeFile = "Attach your resume.";
+    }
     setErrors(req);
     return Object.keys(req).length === 0;
   }
 
   async function handleSubmit(){
     if(!validateStep()) return;
+    setSubmitting(true);
+    setSubmitErr("");
+
+    let resumePath = null;
+    let resumeFileName = null;
+    let resumeUploadFailed = false;
+    if(answers.resumeFile){
+      resumeFileName = answers.resumeFile.name;
+      try{
+        const fb = await getFirebaseBridge();
+        resumePath = await fb.uploadResume(answers.resumeFile, position);
+      }catch(e){
+        console.error("resume upload failed", e);
+        resumeUploadFailed = true;
+      }
+    }
+
     const result = position === "handyman" ? scoreHandyman(answers) : scoreIrrigation(answers);
+    const flags = [...result.flags];
+    if(resumeUploadFailed) flags.push("Resume upload failed — applicant should be asked to resend");
     const tierLabel = {strong:"Strong Match", possible:"Possible Match", reject:"Not Qualified"}[tierFor(result.score, result.disqualified)];
+
+    // Strip the raw File object out of answers before saving — Firestore
+    // can't store it, and it's not useful data on its own once uploaded.
+    const {resumeFile, ...answersWithoutFile} = answers;
+
     const record = {
       position,
       positionLabel: position==="handyman" ? "General Handyman (West Point)" : "Irrigation Technician (Chesterfield/Tri-Cities)",
       name: answers.name, phone: answers.phone, email: answers.email,
-      answers,
+      reference: { name: answers.refName, phone: answers.refPhone, email: answers.refEmail },
+      resumePath, resumeFileName,
+      answers: answersWithoutFile,
       score: result.score,
       disqualified: result.disqualified,
-      flags: result.flags,
+      flags,
       tier: tierFor(result.score, result.disqualified),
       tierLabel,
       submittedAt: Date.now()
     };
     await saveApplication(record);
     notifyByEmail(record); // fire and forget, don't block confirmation
+    setSubmitting(false);
     setSubmitted(true);
   }
 
@@ -565,7 +619,7 @@ function App(){
   const stepTitles = {
     contact:"Contact info", experience:"Experience", skills:"Skills",
     story: position==="handyman" ? "Tell us about a job" : "How you troubleshoot",
-    logistics:"Logistics"
+    logistics:"Logistics", documents:"Reference & resume"
   };
 
   return h("div",{className:"wrap"},
@@ -715,15 +769,44 @@ function App(){
           ),
           errors.bookOfBusiness && h("div",{className:"error"},errors.bookOfBusiness)
         )
+      ),
+
+      s === "documents" && h(React.Fragment,null,
+        h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Reference name"),
+          h("div",{className:"hint"},"Someone who can speak to your work — a past supervisor, foreman, or client."),
+          h("input",{type:"text",value:answers.refName||"",onChange:e=>set("refName",e.target.value)}),
+          errors.refName && h("div",{className:"error"},errors.refName)
+        ),
+        h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Reference phone number"),
+          h("input",{type:"tel",value:answers.refPhone||"",onChange:e=>set("refPhone",e.target.value)}),
+          errors.refPhone && h("div",{className:"error"},errors.refPhone)
+        ),
+        h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Reference email"),
+          h("input",{type:"email",value:answers.refEmail||"",onChange:e=>set("refEmail",e.target.value)}),
+          errors.refEmail && h("div",{className:"error"},errors.refEmail)
+        ),
+        h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Resume"),
+          h("div",{className:"hint"},"PDF, Word doc, or image of a printed resume — up to 10MB."),
+          h("input",{type:"file",accept:".pdf,.doc,.docx,image/*",
+            onChange:e=>set("resumeFile", e.target.files && e.target.files[0] ? e.target.files[0] : null)}),
+          answers.resumeFile && h("div",{style:{fontSize:"12.5px",marginTop:"6px",opacity:0.7}}, `Selected: ${answers.resumeFile.name}`),
+          errors.resumeFile && h("div",{className:"error"},errors.resumeFile)
+        )
       )
     ),
+
+    submitErr && h("div",{className:"error",style:{marginTop:"10px"}},submitErr),
 
     h("div",{className:"nav-row"},
       step === 0
         ? h("button",{className:"btn-ghost",onClick:()=>{setPosition(null);setStep(0);setAnswers({});setErrors({});}},"Back")
-        : h("button",{className:"btn-ghost",onClick:()=>setStep(step-1)},"Back"),
+        : h("button",{className:"btn-ghost",disabled:submitting,onClick:()=>setStep(step-1)},"Back"),
       step === steps.length - 1
-        ? h("button",{className:"btn-primary",onClick:handleSubmit},"Submit application")
+        ? h("button",{className:"btn-primary",disabled:submitting,onClick:handleSubmit}, submitting ? "Submitting…" : "Submit application")
         : h("button",{className:"btn-primary",onClick:()=>{if(validateStep())setStep(step+1);}},"Continue")
     )
   );
@@ -817,9 +900,12 @@ function AdminApp({onBack}){
   });
 
   function exportCSV(){
-    const rows = [["Name","Position","Score","Tier","Phone","Email","Flags","Submitted"]];
+    const rows = [["Name","Position","Score","Tier","Phone","Email","Reference Name","Reference Phone","Reference Email","Resume","Flags","Submitted"]];
     filtered.forEach(a=>{
+      const ref = a.reference || {};
       rows.push([a.name,a.positionLabel,a.score,a.tierLabel,a.phone,a.email,
+        ref.name||"", ref.phone||"", ref.email||"",
+        a.resumePath ? (a.resumeFileName || "on file") : "none",
         (a.flags||[]).join(" | "), new Date(a.submittedAt).toLocaleString()]);
     });
     const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
@@ -869,6 +955,10 @@ function AdminApp({onBack}){
 }
 
 function DetailOverlay({app,onClose}){
+  const [resumeUrl, setResumeUrl] = useState(null);
+  const [resumeErr, setResumeErr] = useState("");
+  const [resumeLoading, setResumeLoading] = useState(false);
+
   const labels = {
     years:"Years of experience", tools:"Own tools/transportation", commercial:"Commercial/industrial experience",
     seasonal:"Start-up/winterization experience", serviceOnly:"OK with service-only role",
@@ -876,6 +966,23 @@ function DetailOverlay({app,onClose}){
     license:"Valid license", authorized:"Work authorized", available:"Available for location/schedule",
     independence:"Independence rating (1-5)", certification:"Certification", bookOfBusiness:"Managed own route before"
   };
+
+  async function loadResume(){
+    setResumeLoading(true);
+    setResumeErr("");
+    try{
+      const fb = await getFirebaseBridge();
+      const url = await fb.getResumeUrl(app.resumePath);
+      setResumeUrl(url);
+      window.open(url, "_blank", "noopener");
+    }catch(e){
+      console.error(e);
+      setResumeErr("Couldn't load resume. Try again.");
+    }finally{
+      setResumeLoading(false);
+    }
+  }
+
   return h("div",{className:"detail-overlay",onClick:onClose},
     h("div",{className:"detail-card",onClick:e=>e.stopPropagation()},
       h("button",{className:"detail-close",onClick:onClose},"×"),
@@ -887,6 +994,20 @@ function DetailOverlay({app,onClose}){
       ),
       app.flags && app.flags.length > 0 && h("div",{className:"flagrow"},
         h("strong",null,"Flags: "), app.flags.join(" · ")
+      ),
+      app.reference && (app.reference.name || app.reference.phone || app.reference.email) && h("div",{className:"detail-row"},
+        h("div",{className:"qk"},"Reference"),
+        h("div",{className:"qv"}, [app.reference.name, app.reference.phone, app.reference.email].filter(Boolean).join(" · "))
+      ),
+      h("div",{className:"detail-row"},
+        h("div",{className:"qk"},"Resume"),
+        app.resumePath
+          ? h("div",{className:"qv"},
+              h("button",{className:"btn-ghost",style:{padding:"6px 12px",fontSize:"12px"},disabled:resumeLoading,onClick:loadResume},
+                resumeLoading ? "Loading…" : `Open ${app.resumeFileName || "resume"}`),
+              resumeErr && h("div",{className:"error",style:{marginTop:"6px"}},resumeErr)
+            )
+          : h("div",{className:"qv",style:{opacity:0.5}}, app.resumeFileName ? "Upload failed — ask applicant to resend" : "Not provided")
       ),
       Object.keys(labels).map(k=>{
         const v = app.answers[k];

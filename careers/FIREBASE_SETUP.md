@@ -1,12 +1,15 @@
 # Job Application Backend — Firebase
 
-`careers/apply.html` uses Firebase (project `wds-jobs`) for two things:
+`careers/apply.html` uses Firebase (project `wds-jobs`) for three things:
 
 1. **Firestore** — stores every submitted application in an `applications`
    collection.
 2. **Firebase Auth (Google Sign-In)** — gates the admin dashboard
    (`careers/apply.html#admin`) so only approved Google accounts can read
    applicant data.
+3. **Firebase Storage** — holds uploaded resumes. Applicants can upload
+   but never read them back; only admins can open one, and only on
+   demand from the dashboard.
 
 The web app config (`apiKey`, `authDomain`, etc., near the top of
 `apply.html`) is safe to be public — it just tells the browser which
@@ -59,14 +62,48 @@ service cloud.firestore {
 
 3. Click **Publish**.
 
+## Also needed: enable Storage + publish its rules (for resumes)
+
+1. Firebase console → your project → left sidebar → **Build → Storage** →
+   **Get started** (accept the default bucket location)
+2. Go to the **Rules** tab on that same Storage page, replace the default
+   with:
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /resumes/{position}/{fileName} {
+      // Applicants can upload (size-capped at 10MB), but never read
+      // resumes back — only admins can.
+      allow write: if request.resource.size < 10 * 1024 * 1024;
+
+      allow read: if request.auth != null
+                  && request.auth.token.email_verified == true
+                  && request.auth.token.email in [
+                       "tori@wdsinc.net",
+                       "info@wdsinc.net"
+                     ];
+    }
+  }
+}
+```
+
+3. Click **Publish**.
+
+Without this, resume uploads will fail (falling back to a "Resume upload
+failed — applicant should be asked to resend" flag on the application —
+the rest of the application still saves fine either way, so a resume
+hiccup never loses the whole submission).
+
 ## Adding or removing admins
 
-Two places have to stay in sync:
+Three places have to stay in sync:
 
 - `ALLOWED_ADMIN_EMAILS` near the top of `careers/apply.html` (controls
   what the UI shows/hides)
-- The `email in [...]` list in the Firestore rules above (the actual
-  enforcement)
+- The `email in [...]` list in the Firestore rules (applications)
+- The `email in [...]` list in the Storage rules (resumes)
 
 Only Google accounts already signed in with Google can be admins — there's
 no separate password to manage. If someone leaves or shouldn't have
