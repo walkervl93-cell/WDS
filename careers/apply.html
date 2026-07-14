@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Field Applications</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root{
+  --ink:#1C1F22;
+  --paper:#F2EFE8;
+  --paper-dim:#E7E2D6;
+  --line:#C9C2B4;
+  --orange:#D65A31;
+  --steel:#3E5C76;
+  --olive:#6B7458;
+  --good:#4B6B43;
+  --bad:#A63A2E;
+  --white:#FEFDFB;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:640px;margin:0 auto;padding:28px 20px 80px;}
+.mono{font-family:'JetBrains Mono',monospace;}
+h1,h2,h3{font-family:'Oswald',sans-serif;margin:0;letter-spacing:0.01em;}
+
+/* header */
+.masthead{display:flex;align-items:baseline;justify-content:space-between;border-bottom:3px solid var(--ink);padding-bottom:14px;margin-bottom:28px;}
+.masthead .brand{font-family:'Oswald',sans-serif;font-weight:700;font-size:20px;letter-spacing:0.03em;text-transform:uppercase;}
+.masthead .doc-id{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink);opacity:0.55;}
+
+/* ticket / carbon-copy selector */
+.ticket-row{display:flex;gap:14px;margin-bottom:8px;}
+.ticket{
+  flex:1;
+  background:var(--white);
+  border:2px solid var(--ink);
+  padding:20px 16px;
+  cursor:pointer;
+  position:relative;
+  transition:transform .15s ease, box-shadow .15s ease;
+  text-align:left;
+}
+.ticket:hover{transform:translateY(-2px);}
+.ticket:focus-visible{outline:3px solid var(--steel);outline-offset:2px;}
+.ticket .tag{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  padding:2px 6px;
+  display:inline-block;
+  margin-bottom:10px;
+  color:var(--white);
+}
+.ticket.h .tag{background:var(--orange);}
+.ticket.i .tag{background:var(--olive);}
+.ticket h3{font-size:19px;margin-bottom:6px;}
+.ticket p{font-size:13px;color:var(--ink);opacity:0.7;margin:0;line-height:1.5;}
+.ticket::before{
+  content:"";position:absolute;left:0;top:12px;bottom:12px;width:4px;
+}
+.ticket.h::before{background:var(--orange);}
+.ticket.i::before{background:var(--olive);}
+
+/* progress */
+.progress-bar{height:4px;background:var(--paper-dim);margin-bottom:26px;border:1px solid var(--line);}
+.progress-fill{height:100%;background:var(--ink);transition:width .3s ease;}
+.step-label{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;opacity:0.6;margin-bottom:6px;}
+
+/* form card */
+.card{background:var(--white);border:1px solid var(--line);padding:26px 22px;margin-bottom:20px;}
+.q{margin-bottom:24px;}
+.q:last-child{margin-bottom:0;}
+.q label.qtitle{display:block;font-weight:600;font-size:15px;margin-bottom:10px;}
+.q .hint{font-size:12px;opacity:0.6;margin-bottom:10px;margin-top:-6px;}
+input[type=text],input[type=email],input[type=tel],textarea,select{
+  width:100%;font-family:'Inter',sans-serif;font-size:14px;padding:10px 12px;
+  border:1px solid var(--line);background:var(--paper);color:var(--ink);
+}
+textarea{min-height:90px;resize:vertical;}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--steel);outline-offset:1px;}
+
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+@media(max-width:420px){.opt-grid{grid-template-columns:1fr;}}
+.opt{
+  border:1px solid var(--line);padding:10px 12px;font-size:13.5px;cursor:pointer;
+  display:flex;align-items:center;gap:8px;background:var(--paper);
+}
+.opt input{margin:0;accent-color:var(--ink);}
+.opt.checked{border-color:var(--ink);background:var(--white);font-weight:500;}
+
+.radio-row{display:flex;flex-direction:column;gap:8px;}
+.radio-opt{border:1px solid var(--line);padding:10px 12px;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:10px;background:var(--paper);}
+.radio-opt.checked{border-color:var(--ink);background:var(--white);font-weight:500;}
+.radio-opt input{accent-color:var(--ink);}
+
+.scale-row{display:flex;gap:6px;}
+.scale-btn{flex:1;text-align:center;padding:10px 0;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;}
+.scale-btn.checked{background:var(--ink);color:var(--white);border-color:var(--ink);}
+
+.nav-row{display:flex;justify-content:space-between;gap:12px;margin-top:6px;}
+button{font-family:'Inter',sans-serif;font-weight:600;font-size:14px;padding:12px 22px;border:none;cursor:pointer;}
+.btn-primary{background:var(--ink);color:var(--white);}
+.btn-primary:hover{background:#000;}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line);}
+.btn-ghost:hover{border-color:var(--ink);}
+button:disabled{opacity:0.4;cursor:not-allowed;}
+
+.error{color:var(--bad);font-size:12.5px;margin-top:6px;font-family:'JetBrains Mono',monospace;}
+
+/* confirmation */
+.confirm{text-align:center;padding:60px 20px;}
+.confirm .stamp{
+  display:inline-block;border:3px solid var(--ink);padding:10px 24px;
+  font-family:'Oswald',sans-serif;font-weight:700;letter-spacing:0.08em;
+  transform:rotate(-3deg);margin-bottom:24px;text-transform:uppercase;font-size:14px;
+}
+.confirm h2{font-size:26px;margin-bottom:12px;}
+.confirm p{opacity:0.75;line-height:1.6;}
+
+footer{text-align:center;margin-top:40px;}
+.admin-link{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink);opacity:0.4;text-decoration:none;border:none;background:none;cursor:pointer;}
+.admin-link:hover{opacity:0.7;}
+
+/* admin */
+.admin-wrap{max-width:1000px;margin:0 auto;padding:28px 20px 80px;}
+.gate{max-width:340px;margin:80px auto;text-align:center;}
+.gate input{margin-bottom:12px;}
+.admin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.admin-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
+.chip{padding:7px 14px;border:1px solid var(--line);font-size:12.5px;cursor:pointer;font-family:'JetBrains Mono',monospace;background:var(--white);}
+.chip.active{background:var(--ink);color:var(--white);border-color:var(--ink);}
+table{width:100%;border-collapse:collapse;background:var(--white);}
+th{text-align:left;font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;padding:10px 12px;border-bottom:2px solid var(--ink);opacity:0.6;}
+td{padding:12px;border-bottom:1px solid var(--line);font-size:13.5px;cursor:pointer;}
+tr:hover td{background:var(--paper-dim);}
+.tier{display:inline-block;padding:3px 9px;font-size:11px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;color:var(--white);}
+.tier.strong{background:var(--good);}
+.tier.possible{background:#B8873A;}
+.tier.reject{background:var(--bad);}
+.score-num{font-family:'JetBrains Mono',monospace;font-weight:600;}
+.empty-state{text-align:center;padding:60px 20px;opacity:0.5;font-size:14px;}
+.detail-overlay{position:fixed;inset:0;background:rgba(28,31,34,0.5);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:10;}
+.detail-card{background:var(--white);max-width:600px;width:100%;padding:28px;margin-bottom:40px;}
+.detail-card h2{margin-bottom:4px;}
+.detail-close{float:right;background:none;border:none;font-size:20px;cursor:pointer;padding:0 4px;}
+.detail-row{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line);}
+.detail-row:last-child{border-bottom:none;}
+.detail-row .qk{font-family:'JetBrains Mono',monospace;font-size:11px;opacity:0.55;text-transform:uppercase;margin-bottom:4px;}
+.detail-row .qv{font-size:14px;}
+.flagrow{background:#FBEFEA;padding:10px 12px;font-size:12.5px;margin-bottom:16px;border-left:3px solid var(--orange);}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script>
+const WEB3FORMS_KEY = "31a25319-e8cf-4c19-b6f2-1c2579702287";
+const ADMIN_PASSCODE = "wdstrades26";
+
+// Deployed Google Apps Script Web App URL — see careers/GOOGLE_SHEETS_SETUP.md.
+// Blank until you deploy the script; the form/admin dashboard cannot save or
+// load real applications until this is filled in.
+const SHEETS_WEBAPP_URL = "";
+// Shared key checked by the Apps Script (see setup doc). Not real security —
+// anyone who views page source can read it — but stops casual/automated
+// discovery of the endpoint. Change it here and in the script together.
+const SHEETS_SHARED_KEY = "wds-field-apps-2026";
+
+/* ---------------- QUESTION DEFINITIONS ---------------- */
+
+const HANDYMAN_SKILLS = [
+  {k:"plumbing", label:"Plumbing (toilets, flush valves, fixture swaps, rough-in)"},
+  {k:"electrical", label:"Basic electrical (outlets, switches, fixtures)"},
+  {k:"carpentry", label:"Carpentry / drywall / painting"},
+  {k:"flooring", label:"Flooring (tile, LVP, epoxy)"},
+  {k:"fencing", label:"Chain-link fencing"},
+];
+
+const IRRIGATION_SKILLS = [
+  {k:"heads", label:"Head install & repair (rotor, spray, drip)"},
+  {k:"pipe", label:"PVC pipe and funny pipe"},
+  {k:"controllers", label:"Controller diagnostics & programming"},
+  {k:"valves", label:"Valve repair & replacement"},
+];
+
+/* ---------------- SCORING ---------------- */
+
+function scoreHandyman(a){
+  let score = 0, flags = [], disqualified = false;
+
+  const years = parseFloat(a.years) || 0;
+  score += Math.min(years, 5) * 6; // up to 30
+
+  const skillCount = (a.skills||[]).length;
+  score += skillCount * 8; // up to 40
+
+  if(a.commercial === "yes") score += 10;
+
+  if(a.tools === "no"){ disqualified = true; flags.push("No own tools/transportation"); }
+  else score += 5;
+
+  const indep = parseInt(a.independence)||0;
+  score += indep * 2; // up to 10
+  if(indep <= 2) flags.push("Rated own independence low (" + indep + "/5)");
+
+  const desc = (a.jobStory||"").trim();
+  if(desc.split(/\s+/).filter(Boolean).length < 12){
+    flags.push("Job description too short/vague to verify hands-on experience");
+    score -= 15;
+  } else {
+    score += 5;
+  }
+
+  if(a.license === "no") disqualified = true, flags.push("No valid driver's license");
+  if(a.authorized === "no") disqualified = true, flags.push("Not authorized to work in the US");
+  if(a.available === "no") disqualified = true, flags.push("Not available for West Point location/schedule");
+  if(years < 1) disqualified = true, flags.push("Under 1 year of multi-trade experience");
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  return {score, flags, disqualified};
+}
+
+function scoreIrrigation(a){
+  let score = 0, flags = [], disqualified = false;
+
+  const years = parseFloat(a.years) || 0;
+  if(years <= 0){ disqualified = true; flags.push("No irrigation-specific experience"); }
+  score += Math.min(years, 5) * 7; // up to 35
+
+  const skillCount = (a.skills||[]).length;
+  score += skillCount * 7; // up to 28
+
+  if(a.seasonal === "no"){ disqualified = true; flags.push("No spring start-up / fall winterization experience"); }
+  else score += 15;
+
+  if(a.serviceOnly === "no"){ disqualified = true; flags.push("Wants new-install work; role is service/maintenance only"); }
+
+  if(a.certification === "backflow" || a.certification === "cit") score += 6;
+  if(a.certification === "both") score += 10;
+
+  if(a.bookOfBusiness === "yes") score += 6;
+
+  const desc = (a.diagnose||"").trim();
+  if(desc.split(/\s+/).filter(Boolean).length < 10){
+    flags.push("Diagnostic answer too short/vague to verify troubleshooting ability");
+    score -= 15;
+  } else {
+    score += 5;
+  }
+
+  if(a.license === "no") disqualified = true, flags.push("No valid driver's license");
+  if(a.authorized === "no") disqualified = true, flags.push("Not authorized to work in the US");
+  if(a.available === "no") disqualified = true, flags.push("Not available for Chesterfield/Tri-Cities location/schedule");
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  return {score, flags, disqualified};
+}
+
+function tierFor(score, disqualified){
+  if(disqualified || score < 50) return "reject";
+  if(score < 80) return "possible";
+  return "strong";
+}
+
+/* ---------------- STORAGE (Google Sheets via Apps Script) ---------------- */
+//
+// Backed by a Google Apps Script Web App (see GOOGLE_SHEETS_SETUP.md) that
+// appends rows to a Sheet on save, and returns all rows as JSON on list.
+// If SHEETS_WEBAPP_URL isn't configured yet, or the request fails, the
+// record is stashed in localStorage under LOCAL_BACKUP_KEY so nothing is
+// silently lost — check there and re-submit manually via the Apps Script
+// URL if you ever see a save failure.
+
+const LOCAL_BACKUP_KEY = "wds_unsaved_applications";
+
+function stashLocalBackup(record){
+  try{
+    const existing = JSON.parse(localStorage.getItem(LOCAL_BACKUP_KEY) || "[]");
+    existing.push(record);
+    localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify(existing));
+  }catch(e){ console.error("local backup failed too", e); }
+}
+
+async function saveApplication(record){
+  if(!SHEETS_WEBAPP_URL){
+    console.error("SHEETS_WEBAPP_URL not configured — saving to local backup only.");
+    stashLocalBackup(record);
+    return;
+  }
+  try{
+    const res = await fetch(SHEETS_WEBAPP_URL, {
+      method: "POST",
+      headers: {"Content-Type":"text/plain"}, // avoids an Apps Script CORS preflight
+      body: JSON.stringify({key: SHEETS_SHARED_KEY, action: "save", record})
+    });
+    const data = await res.json();
+    if(!data || !data.ok) throw new Error((data && data.error) || "unknown save error");
+  }catch(e){
+    console.error("sheets save failed, using local backup", e);
+    stashLocalBackup(record);
+  }
+}
+
+async function loadAllApplications(){
+  if(!SHEETS_WEBAPP_URL) return [];
+  try{
+    const res = await fetch(`${SHEETS_WEBAPP_URL}?key=${encodeURIComponent(SHEETS_SHARED_KEY)}&action=list`);
+    const data = await res.json();
+    if(!data || !data.ok || !Array.isArray(data.records)) return [];
+    return data.records;
+  }catch(e){
+    console.error("sheets list failed", e);
+    return [];
+  }
+}
+
+async function notifyByEmail(record){
+  const body = {
+    access_key: WEB3FORMS_KEY,
+    subject: `New Application: ${record.positionLabel} — ${record.tierLabel} (${record.score}/100) — ${record.name}`,
+    from_name: "WDS Field Applications",
+    email: "tori@wdsinc.net",
+    cc: "info@wdsinc.net",
+    "Applicant Name": record.name,
+    "Position": record.positionLabel,
+    "Score": `${record.score}/100 — ${record.tierLabel}`,
+    "Phone": record.phone,
+    "Email": record.email,
+    "Flags": record.flags.length ? record.flags.join("; ") : "None",
+    "message": `${record.name} applied for ${record.positionLabel}.\n\nScore: ${record.score}/100 (${record.tierLabel})\nPhone: ${record.phone}\nEmail: ${record.email}\n\nFlags:\n${record.flags.length ? record.flags.map(f=>"- "+f).join("\n") : "None"}\n\nFull answers are saved in the application dashboard.`
+  };
+  try{
+    const res = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      headers: {"Content-Type":"application/json", "Accept":"application/json"},
+      body: JSON.stringify(body)
+    });
+    return res.ok;
+  }catch(e){
+    console.error("notify failed", e);
+    return false;
+  }
+}
+
+/* ---------------- REACT APP (no build step, using htm-free createElement) ---------------- */
+
+const {useState, useEffect} = React;
+const h = React.createElement;
+
+function Ticket({type, title, tagline, desc, onClick}){
+  return h("div", {
+    className: `ticket ${type==='handyman'?'h':'i'}`,
+    onClick, tabIndex:0, role:"button",
+    onKeyDown:(e)=>{if(e.key==="Enter")onClick();}
+  },
+    h("span",{className:"tag"}, tagline),
+    h("h3",null,title),
+    h("p",null,desc)
+  );
+}
+
+function Opt({label, checked, onChange}){
+  return h("label",{className:`opt ${checked?'checked':''}`},
+    h("input",{type:"checkbox",checked,onChange}),
+    label
+  );
+}
+
+function RadioOpt({name,label,checked,onChange}){
+  return h("label",{className:`radio-opt ${checked?'checked':''}`},
+    h("input",{type:"radio",name,checked,onChange}),
+    label
+  );
+}
+
+function ScaleRow({value,onChange}){
+  return h("div",{className:"scale-row"},
+    [1,2,3,4,5].map(n=>h("div",{
+      key:n,
+      className:`scale-btn ${value===n?'checked':''}`,
+      onClick:()=>onChange(n)
+    }, n))
+  );
+}
+
+function App(){
+  const [route, setRoute] = useState("form"); // form | admin
+  const [position, setPosition] = useState(null);
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  useEffect(()=>{
+    if(window.location.hash === "#admin"){ setRoute("admin"); return; }
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get("position");
+    if(p === "handyman" || p === "irrigation") setPosition(p);
+  },[]);
+
+  function set(field, val){
+    setAnswers(a=>({...a, [field]: val}));
+    setErrors(e=>({...e, [field]: null}));
+  }
+  function toggleSkill(field, key){
+    const cur = answers[field] || [];
+    const next = cur.includes(key) ? cur.filter(x=>x!==key) : [...cur, key];
+    set(field, next);
+  }
+
+  const steps = position === "handyman"
+    ? ["contact","experience","skills","story","logistics"]
+    : position === "irrigation"
+    ? ["contact","experience","skills","story","logistics"]
+    : [];
+
+  function validateStep(){
+    const s = steps[step];
+    const req = {};
+    if(s === "contact"){
+      if(!answers.name) req.name = "Enter your name.";
+      if(!answers.phone) req.phone = "Enter a phone number.";
+      if(!answers.email) req.email = "Enter an email address.";
+    }
+    if(s === "experience"){
+      if(answers.years === undefined || answers.years === "") req.years = "Enter years of experience.";
+      if(position==="handyman" && !answers.tools) req.tools = "Select an option.";
+      if(position==="handyman" && !answers.commercial) req.commercial = "Select an option.";
+      if(position==="irrigation" && !answers.seasonal) req.seasonal = "Select an option.";
+      if(position==="irrigation" && !answers.serviceOnly) req.serviceOnly = "Select an option.";
+    }
+    if(s === "skills"){
+      if(!(answers.skills||[]).length) req.skills = "Select at least one.";
+    }
+    if(s === "story"){
+      const field = position==="handyman" ? "jobStory" : "diagnose";
+      if(!(answers[field]||"").trim()) req[field] = "This one matters — please answer.";
+    }
+    if(s === "logistics"){
+      if(!answers.license) req.license = "Select an option.";
+      if(!answers.authorized) req.authorized = "Select an option.";
+      if(!answers.available) req.available = "Select an option.";
+      if(position==="handyman" && !answers.independence) req.independence = "Rate yourself 1-5.";
+      if(position==="irrigation" && !answers.certification) req.certification = "Select an option.";
+      if(position==="irrigation" && !answers.bookOfBusiness) req.bookOfBusiness = "Select an option.";
+    }
+    setErrors(req);
+    return Object.keys(req).length === 0;
+  }
+
+  async function handleSubmit(){
+    if(!validateStep()) return;
+    const result = position === "handyman" ? scoreHandyman(answers) : scoreIrrigation(answers);
+    const tierLabel = {strong:"Strong Match", possible:"Possible Match", reject:"Not Qualified"}[tierFor(result.score, result.disqualified)];
+    const record = {
+      position,
+      positionLabel: position==="handyman" ? "General Handyman (West Point)" : "Irrigation Technician (Chesterfield/Tri-Cities)",
+      name: answers.name, phone: answers.phone, email: answers.email,
+      answers,
+      score: result.score,
+      disqualified: result.disqualified,
+      flags: result.flags,
+      tier: tierFor(result.score, result.disqualified),
+      tierLabel,
+      submittedAt: Date.now()
+    };
+    await saveApplication(record);
+    notifyByEmail(record); // fire and forget, don't block confirmation
+    setSubmitted(true);
+  }
+
+  if(route === "admin"){
+    return h(AdminApp, {onBack:()=>{window.location.hash="";setRoute("form");}});
+  }
+
+  if(submitted){
+    return h("div",{className:"wrap"},
+      h("div",{className:"confirm"},
+        h("div",{className:"stamp"}, "Application Received"),
+        h("h2",null,"Thanks — we'll be in touch if it's a fit."),
+        h("p",null,"Your application has been logged. If your experience matches what we need, someone from our team will reach out directly.")
+      )
+    );
+  }
+
+  if(!position){
+    return h("div",{className:"wrap"},
+      h("div",{className:"masthead"},
+        h("div",{className:"brand"},"Field Applications"),
+        h("div",{className:"doc-id mono"},"WDS-APP")
+      ),
+      h("p",{style:{marginBottom:"20px",fontSize:"14.5px",opacity:0.75,lineHeight:1.6}},
+        "Two roles are open right now. Pick the one you're applying for to start."),
+      h("div",{className:"ticket-row"},
+        h(Ticket,{
+          type:"handyman", tagline:"West Point, VA",
+          title:"General Handyman",
+          desc:"Plumbing, basic electrical, carpentry, flooring, fencing — light commercial & residential.",
+          onClick:()=>setPosition("handyman")
+        }),
+        h(Ticket,{
+          type:"irrigation", tagline:"Chesterfield / Tri-Cities",
+          title:"Irrigation Technician",
+          desc:"Service and maintain an existing route. Heads, pipe, controllers, seasonal start-up & winterization.",
+          onClick:()=>setPosition("irrigation")
+        })
+      ),
+      h("footer",null,
+        h("button",{className:"admin-link",onClick:()=>{window.location.hash="admin";setRoute("admin");}},"admin")
+      )
+    );
+  }
+
+  const s = steps[step];
+  const pct = Math.round(((step+1)/steps.length)*100);
+  const stepTitles = {
+    contact:"Contact info", experience:"Experience", skills:"Skills",
+    story: position==="handyman" ? "Tell us about a job" : "How you troubleshoot",
+    logistics:"Logistics"
+  };
+
+  return h("div",{className:"wrap"},
+    h("div",{className:"masthead"},
+      h("div",{className:"brand"}, position==="handyman"?"Handyman Application":"Irrigation Tech Application"),
+      h("div",{className:"doc-id mono"}, position==="handyman"?"WDS-HM":"WDS-IRR")
+    ),
+    h("div",{className:"step-label"}, `Step ${step+1} of ${steps.length} — ${stepTitles[s]}`),
+    h("div",{className:"progress-bar"}, h("div",{className:"progress-fill",style:{width:pct+"%"}})),
+
+    h("div",{className:"card"},
+
+      s === "contact" && h(React.Fragment,null,
+        h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Full name"),
+          h("input",{type:"text",value:answers.name||"",onChange:e=>set("name",e.target.value)}),
+          errors.name && h("div",{className:"error"},errors.name)
+        ),
+        h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Phone number"),
+          h("input",{type:"tel",value:answers.phone||"",onChange:e=>set("phone",e.target.value)}),
+          errors.phone && h("div",{className:"error"},errors.phone)
+        ),
+        h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Email"),
+          h("input",{type:"email",value:answers.email||"",onChange:e=>set("email",e.target.value)}),
+          errors.email && h("div",{className:"error"},errors.email)
+        )
+      ),
+
+      s === "experience" && h(React.Fragment,null,
+        h("div",{className:"q"},
+          h("label",{className:"qtitle"}, position==="handyman" ? "Years of hands-on multi-trade experience" : "Years of irrigation-specific service experience"),
+          h("input",{type:"text",inputMode:"decimal",value:answers.years||"",onChange:e=>set("years",e.target.value),placeholder:"e.g. 4"}),
+          errors.years && h("div",{className:"error"},errors.years)
+        ),
+        position==="handyman" && h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Do you have your own tools and reliable transportation?"),
+          h("div",{className:"radio-row"},
+            h(RadioOpt,{name:"tools",label:"Yes",checked:answers.tools==="yes",onChange:()=>set("tools","yes")}),
+            h(RadioOpt,{name:"tools",label:"No",checked:answers.tools==="no",onChange:()=>set("tools","no")})
+          ),
+          errors.tools && h("div",{className:"error"},errors.tools)
+        ),
+        position==="handyman" && h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Have you worked in commercial or industrial settings (not just residential)?"),
+          h("div",{className:"radio-row"},
+            h(RadioOpt,{name:"commercial",label:"Yes",checked:answers.commercial==="yes",onChange:()=>set("commercial","yes")}),
+            h(RadioOpt,{name:"commercial",label:"No",checked:answers.commercial==="no",onChange:()=>set("commercial","no")})
+          ),
+          errors.commercial && h("div",{className:"error"},errors.commercial)
+        ),
+        position==="irrigation" && h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Have you done spring start-ups and fall winterizations before?"),
+          h("div",{className:"hint"},"Includes compressor blow-outs and controller shutdown."),
+          h("div",{className:"radio-row"},
+            h(RadioOpt,{name:"seasonal",label:"Yes",checked:answers.seasonal==="yes",onChange:()=>set("seasonal","yes")}),
+            h(RadioOpt,{name:"seasonal",label:"No",checked:answers.seasonal==="no",onChange:()=>set("seasonal","no")})
+          ),
+          errors.seasonal && h("div",{className:"error"},errors.seasonal)
+        ),
+        position==="irrigation" && h("div",{className:"q"},
+          h("label",{className:"qtitle"},"This role is service and maintenance on an existing route — no full new installs. Are you good with that?"),
+          h("div",{className:"radio-row"},
+            h(RadioOpt,{name:"serviceOnly",label:"Yes, that's what I want",checked:answers.serviceOnly==="yes",onChange:()=>set("serviceOnly","yes")}),
+            h(RadioOpt,{name:"serviceOnly",label:"No, I'm looking for install work",checked:answers.serviceOnly==="no",onChange:()=>set("serviceOnly","no")})
+          ),
+          errors.serviceOnly && h("div",{className:"error"},errors.serviceOnly)
+        )
+      ),
+
+      s === "skills" && h("div",{className:"q"},
+        h("label",{className:"qtitle"},"Which of these have you done hands-on?"),
+        h("div",{className:"hint"},"Select all that apply."),
+        h("div",{className:"opt-grid"},
+          (position==="handyman"?HANDYMAN_SKILLS:IRRIGATION_SKILLS).map(sk=>
+            h(Opt,{key:sk.k,label:sk.label,checked:(answers.skills||[]).includes(sk.k),onChange:()=>toggleSkill("skills",sk.k)})
+          )
+        ),
+        errors.skills && h("div",{className:"error"},errors.skills)
+      ),
+
+      s === "story" && h("div",{className:"q"},
+        position==="handyman"
+          ? h(React.Fragment,null,
+              h("label",{className:"qtitle"},"Describe a renovation or repair job you handled start to finish."),
+              h("div",{className:"hint"},"What was the problem, what trades did it touch, how did you close it out?"),
+              h("textarea",{value:answers.jobStory||"",onChange:e=>set("jobStory",e.target.value)}),
+              errors.jobStory && h("div",{className:"error"},errors.jobStory)
+            )
+          : h(React.Fragment,null,
+              h("label",{className:"qtitle"},"Walk through how you diagnose a zone that isn't working."),
+              h("div",{className:"hint"},"What do you check first, second, third?"),
+              h("textarea",{value:answers.diagnose||"",onChange:e=>set("diagnose",e.target.value)}),
+              errors.diagnose && h("div",{className:"error"},errors.diagnose)
+            )
+      ),
+
+      s === "logistics" && h(React.Fragment,null,
+        h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Do you have a valid driver's license?"),
+          h("div",{className:"radio-row"},
+            h(RadioOpt,{name:"license",label:"Yes",checked:answers.license==="yes",onChange:()=>set("license","yes")}),
+            h(RadioOpt,{name:"license",label:"No",checked:answers.license==="no",onChange:()=>set("license","no")})
+          ),
+          errors.license && h("div",{className:"error"},errors.license)
+        ),
+        h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Are you authorized to work in the United States?"),
+          h("div",{className:"radio-row"},
+            h(RadioOpt,{name:"authorized",label:"Yes",checked:answers.authorized==="yes",onChange:()=>set("authorized","yes")}),
+            h(RadioOpt,{name:"authorized",label:"No",checked:answers.authorized==="no",onChange:()=>set("authorized","no")})
+          ),
+          errors.authorized && h("div",{className:"error"},errors.authorized)
+        ),
+        h("div",{className:"q"},
+          h("label",{className:"qtitle"}, position==="handyman"
+            ? "Available to work out of West Point, VA?"
+            : "Available to cover the Chesterfield / Tri-Cities route?"),
+          h("div",{className:"radio-row"},
+            h(RadioOpt,{name:"available",label:"Yes",checked:answers.available==="yes",onChange:()=>set("available","yes")}),
+            h(RadioOpt,{name:"available",label:"No",checked:answers.available==="no",onChange:()=>set("available","no")})
+          ),
+          errors.available && h("div",{className:"error"},errors.available)
+        ),
+        position==="handyman" && h("div",{className:"q"},
+          h("label",{className:"qtitle"},"How comfortable are you working independently with minimal supervision?"),
+          h("div",{className:"hint"},"1 = need close direction · 5 = give me the address and I'll handle it"),
+          h(ScaleRow,{value:answers.independence,onChange:v=>set("independence",v)}),
+          errors.independence && h("div",{className:"error"},errors.independence)
+        ),
+        position==="irrigation" && h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Any certifications?"),
+          h("div",{className:"radio-row"},
+            h(RadioOpt,{name:"cert",label:"Backflow preventer certified",checked:answers.certification==="backflow",onChange:()=>set("certification","backflow")}),
+            h(RadioOpt,{name:"cert",label:"Irrigation Association CIT",checked:answers.certification==="cit",onChange:()=>set("certification","cit")}),
+            h(RadioOpt,{name:"cert",label:"Both",checked:answers.certification==="both",onChange:()=>set("certification","both")}),
+            h(RadioOpt,{name:"cert",label:"Neither, not yet",checked:answers.certification==="none",onChange:()=>set("certification","none")})
+          ),
+          errors.certification && h("div",{className:"error"},errors.certification)
+        ),
+        position==="irrigation" && h("div",{className:"q"},
+          h("label",{className:"qtitle"},"Have you managed your own recurring customer route/book of business before?"),
+          h("div",{className:"radio-row"},
+            h(RadioOpt,{name:"book",label:"Yes",checked:answers.bookOfBusiness==="yes",onChange:()=>set("bookOfBusiness","yes")}),
+            h(RadioOpt,{name:"book",label:"No",checked:answers.bookOfBusiness==="no",onChange:()=>set("bookOfBusiness","no")})
+          ),
+          errors.bookOfBusiness && h("div",{className:"error"},errors.bookOfBusiness)
+        )
+      )
+    ),
+
+    h("div",{className:"nav-row"},
+      step === 0
+        ? h("button",{className:"btn-ghost",onClick:()=>{setPosition(null);setStep(0);setAnswers({});setErrors({});}},"Back")
+        : h("button",{className:"btn-ghost",onClick:()=>setStep(step-1)},"Back"),
+      step === steps.length - 1
+        ? h("button",{className:"btn-primary",onClick:handleSubmit},"Submit application")
+        : h("button",{className:"btn-primary",onClick:()=>{if(validateStep())setStep(step+1);}},"Continue")
+    )
+  );
+}
+
+/* ---------------- ADMIN ---------------- */
+
+function AdminApp({onBack}){
+  const [unlocked, setUnlocked] = useState(false);
+  const [pass, setPass] = useState("");
+  const [gateErr, setGateErr] = useState(false);
+  const [apps, setApps] = useState(null);
+  const [filter, setFilter] = useState("all");
+  const [selected, setSelected] = useState(null);
+
+  useEffect(()=>{
+    if(unlocked){
+      loadAllApplications().then(list=>{
+        let backup = [];
+        try{ backup = JSON.parse(localStorage.getItem(LOCAL_BACKUP_KEY) || "[]"); }catch(e){}
+        backup = backup.map(r=>({...r, unsynced:true}));
+        const all = [...list, ...backup];
+        all.sort((a,b)=>b.score-a.score);
+        setApps(all);
+      });
+    }
+  },[unlocked]);
+
+  if(!unlocked){
+    return h("div",{className:"admin-wrap"},
+      h("div",{className:"gate"},
+        h("h2",{style:{marginBottom:"18px"}},"Admin access"),
+        h("input",{type:"password",value:pass,placeholder:"Passcode",
+          onChange:e=>{setPass(e.target.value);setGateErr(false);}}),
+        gateErr && h("div",{className:"error",style:{marginBottom:"12px"}},"Wrong passcode."),
+        h("button",{className:"btn-primary",style:{width:"100%"},
+          onClick:()=>{ if(pass===ADMIN_PASSCODE) setUnlocked(true); else setGateErr(true); }
+        },"Enter"),
+        h("div",{style:{marginTop:"16px"}},
+          h("button",{className:"admin-link",onClick:onBack},"← back to application form")
+        )
+      )
+    );
+  }
+
+  if(apps === null){
+    return h("div",{className:"admin-wrap"}, h("div",{className:"empty-state"},"Loading applications…"));
+  }
+
+  const filtered = apps.filter(a=>{
+    if(filter==="all") return true;
+    if(filter==="handyman") return a.position==="handyman";
+    if(filter==="irrigation") return a.position==="irrigation";
+    if(filter==="qualified") return a.tier!=="reject";
+    return true;
+  });
+
+  function exportCSV(){
+    const rows = [["Name","Position","Score","Tier","Phone","Email","Flags","Submitted"]];
+    filtered.forEach(a=>{
+      rows.push([a.name,a.positionLabel,a.score,a.tierLabel,a.phone,a.email,
+        (a.flags||[]).join(" | "), new Date(a.submittedAt).toLocaleString()]);
+    });
+    const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv],{type:"text/csv"});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = "applications.csv"; link.click();
+  }
+
+  return h("div",{className:"admin-wrap"},
+    !SHEETS_WEBAPP_URL && h("div",{className:"flagrow",style:{marginBottom:"20px"}},
+      h("strong",null,"Not connected: "),
+      "SHEETS_WEBAPP_URL is blank, so this is only showing local-backup entries from this browser. Follow careers/GOOGLE_SHEETS_SETUP.md to connect the real Sheet."
+    ),
+    h("div",{className:"admin-header"},
+      h("h2",null,"Applications"),
+      h("div",{style:{display:"flex",gap:"10px"}},
+        h("button",{className:"btn-ghost",onClick:exportCSV},"Export CSV"),
+        h("button",{className:"btn-ghost",onClick:onBack},"Back to form")
+      )
+    ),
+    h("div",{className:"admin-toolbar"},
+      ["all","qualified","handyman","irrigation"].map(f=>
+        h("div",{key:f,className:`chip ${filter===f?'active':''}`,onClick:()=>setFilter(f)},
+          f==="all"?"All":f==="qualified"?"Qualified only":f==="handyman"?"Handyman":"Irrigation")
+      )
+    ),
+    filtered.length === 0
+      ? h("div",{className:"empty-state"},"No applications yet. New submissions will show up here.")
+      : h("table",null,
+          h("thead",null,h("tr",null,
+            h("th",null,"Score"),h("th",null,"Name"),h("th",null,"Position"),
+            h("th",null,"Status"),h("th",null,"Submitted")
+          )),
+          h("tbody",null,
+            filtered.map((a,i)=>h("tr",{key:i,onClick:()=>setSelected(a)},
+              h("td",null,h("span",{className:"score-num"},a.score)),
+              h("td",null,a.name, a.unsynced && h("span",{className:"tier reject",style:{marginLeft:"8px"}},"Unsynced")),
+              h("td",null,a.position==="handyman"?"Handyman":"Irrigation"),
+              h("td",null,h("span",{className:`tier ${a.tier}`},a.tierLabel)),
+              h("td",null,new Date(a.submittedAt).toLocaleDateString())
+            ))
+          )
+        ),
+    selected && h(DetailOverlay,{app:selected,onClose:()=>setSelected(null)})
+  );
+}
+
+function DetailOverlay({app,onClose}){
+  const labels = {
+    years:"Years of experience", tools:"Own tools/transportation", commercial:"Commercial/industrial experience",
+    seasonal:"Start-up/winterization experience", serviceOnly:"OK with service-only role",
+    skills:"Skills confirmed", jobStory:"Job walkthrough", diagnose:"Diagnostic approach",
+    license:"Valid license", authorized:"Work authorized", available:"Available for location/schedule",
+    independence:"Independence rating (1-5)", certification:"Certification", bookOfBusiness:"Managed own route before"
+  };
+  return h("div",{className:"detail-overlay",onClick:onClose},
+    h("div",{className:"detail-card",onClick:e=>e.stopPropagation()},
+      h("button",{className:"detail-close",onClick:onClose},"×"),
+      h("h2",null,app.name),
+      h("p",{style:{opacity:0.65,marginBottom:"18px"}}, app.positionLabel + " · " + app.phone + " · " + app.email),
+      h("div",{style:{marginBottom:"18px"}},
+        h("span",{className:`tier ${app.tier}`},app.tierLabel),
+        h("span",{className:"score-num",style:{marginLeft:"10px"}}, app.score + "/100")
+      ),
+      app.flags && app.flags.length > 0 && h("div",{className:"flagrow"},
+        h("strong",null,"Flags: "), app.flags.join(" · ")
+      ),
+      Object.keys(labels).map(k=>{
+        const v = app.answers[k];
+        if(v === undefined || v === "" || (Array.isArray(v) && v.length===0)) return null;
+        return h("div",{className:"detail-row",key:k},
+          h("div",{className:"qk"},labels[k]),
+          h("div",{className:"qv"}, Array.isArray(v) ? v.join(", ") : String(v))
+        );
+      })
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+</script>
+</body>
+</html>

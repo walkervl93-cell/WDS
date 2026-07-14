@@ -1,13 +1,14 @@
-// Job board — structural placeholder.
+// Job board.
 //
-// Phase 2 replaces the JOBS array below with a fetch() call to the admin
-// backend (the portal where an admin logs in and manages postings).
-// For now this renders straight from local data so the page layout —
-// job cards, empty state — can be reviewed without the backend built yet.
+// These two postings link straight into the scored application
+// questionnaire at careers/apply.html (see that file +
+// careers/GOOGLE_SHEETS_SETUP.md for how submissions are stored).
+// Once there's an admin UI for managing postings, this static array gets
+// replaced with a fetch() against that backend.
 
 const JOBS = [
-  // Example shape once real postings exist:
-  // { title: 'Industrial Handyman', location: 'South Chesterfield, VA', type: 'Full-Time', posted: '2026-07-01' }
+  { title: 'General Handyman / Maintenance Technician', location: 'West Point, VA', type: 'Full-Time · $21–24/hr', applyHref: 'careers/apply.html?position=handyman' },
+  { title: 'Irrigation Technician', location: 'Chesterfield / Tri-Cities, VA', type: 'Full-Time · $21–24/hr', applyHref: 'careers/apply.html?position=irrigation' },
 ];
 
 function renderJobs() {
@@ -29,7 +30,7 @@ function renderJobs() {
         <h3>${job.title}</h3>
         <div class="job-meta">${job.location} &middot; ${job.type}</div>
       </div>
-      <a href="mailto:info@wdsinc.net?subject=Application:%20${encodeURIComponent(job.title)}" class="btn btn-primary">Apply</a>
+      <a href="${job.applyHref}" class="btn btn-primary">Apply</a>
     </div>`).join('')}</div>`;
 }
 
