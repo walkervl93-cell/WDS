@@ -7,7 +7,9 @@ Structural pass for the WDS Inc website redesign. Static HTML/CSS/JS, no build s
 - `index.html` — Home
 - `services.html` — Services
 - `about.html` — Company history, reputation, team, safety/vetting
-- `careers.html` — Job board (stub — see below)
+- `careers.html` — Job board, links into per-role description pages
+- `careers/handyman.html`, `careers/irrigation.html` — Full job descriptions, Apply buttons top & bottom
+- `careers/apply.html` — Scored application questionnaire + admin dashboard (see `careers/FIREBASE_SETUP.md`)
 - `contact.html` — Contact form + info
 
 Header/nav and footer are consistent across all five pages. Footer markup is
@@ -33,7 +35,6 @@ spread out rather than repeated):
 
 **Real assets** — still placeholder boxes, no matching photo supplied yet:
 
-- `assets/images/wds-logo.svg`, `wds-logo-white.svg` — swap for the real logo export
 - Exterior Design & Renovation photo (Services card)
 - Lawncare & Irrigation photo (Services card)
 - Founder / early-company archive photo (About page)
@@ -47,11 +48,17 @@ IntersectionObserver reveal wired up as a starting point. The actual
 animation treatment (word/line reveals, easing, etc.) is the next layout
 pass.
 
-**Job board backend** — `careers.html` currently renders from a local
-`JOBS` array in `js/jobs.js` (empty, shows the "no open positions" empty
-state). Phase 2 is the admin portal: an admin auth flow + a place to
-create/edit/remove listings, with `js/jobs.js` switched from static data to
-a fetch() against that backend.
+**Job board backend** — built. `careers/apply.html` is a scored
+application questionnaire (General Handyman, Irrigation Technician)
+backed by Firebase: applicants submit to Firestore (no login needed),
+and the admin dashboard at `careers/apply.html#admin` is gated behind
+Google Sign-In restricted to an email allowlist. See
+`careers/FIREBASE_SETUP.md` for the security rules this depends on —
+**the rules must be published in the Firebase console before submissions
+or admin login will work.** `careers.html` still lists postings from a
+static `JOBS` array in `js/jobs.js`; wiring that to a real "add/edit
+listings" admin UI (rather than editing the array by hand) is the one
+remaining piece of the original job-board request.
 
 **Contact form** — currently a plain `mailto:` form per the original site's
 copy ("insert contact form with mailto link"). Fine as a placeholder;

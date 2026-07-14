@@ -164,18 +164,66 @@ tr:hover td{background:var(--paper-dim);}
 
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+<!--
+  Firebase bridge — module scripts are deferred (run after the page
+  parses), so this initializes asynchronously and exposes everything the
+  React app below needs on window.__wdsFirebase. React only touches it
+  inside user-triggered handlers (submit, sign-in) or a useEffect, both of
+  which run well after this has finished, so there's no race in practice.
+  See careers/FIREBASE_SETUP.md for the security rules this depends on.
+-->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, getDocs, query, orderBy }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBUGM7_d08GixZbA1HOW1vCVtIhsGp9l_4",
+    authDomain: "wds-jobs.firebaseapp.com",
+    projectId: "wds-jobs",
+    storageBucket: "wds-jobs.firebasestorage.app",
+    messagingSenderId: "738789026546",
+    appId: "1:738789026546:web:86cc8622c6532eead2fe6b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  window.__wdsFirebase = {
+    onAuthChange: (cb) => onAuthStateChanged(auth, cb),
+    signInWithGoogle: () => signInWithPopup(auth, new GoogleAuthProvider()),
+    signOutAdmin: () => signOut(auth),
+    saveApplication: async (record) => {
+      await addDoc(collection(db, "applications"), record);
+    },
+    loadApplications: async () => {
+      const snap = await getDocs(query(collection(db, "applications"), orderBy("submittedAt", "desc")));
+      return snap.docs.map(d => d.data());
+    }
+  };
+</script>
+
 <script>
 const WEB3FORMS_KEY = "31a25319-e8cf-4c19-b6f2-1c2579702287";
-const ADMIN_PASSCODE = "wdstrades26";
 
-// Deployed Google Apps Script Web App URL — see careers/GOOGLE_SHEETS_SETUP.md.
-// Blank until you deploy the script; the form/admin dashboard cannot save or
-// load real applications until this is filled in.
-const SHEETS_WEBAPP_URL = "";
-// Shared key checked by the Apps Script (see setup doc). Not real security —
-// anyone who views page source can read it — but stops casual/automated
-// discovery of the endpoint. Change it here and in the script together.
-const SHEETS_SHARED_KEY = "wds-field-apps-2026";
+// Google accounts allowed into the admin dashboard. Enforced for real by
+// the Firestore security rules (see FIREBASE_SETUP.md) — this array only
+// controls what the UI shows; it is not itself a security boundary.
+const ALLOWED_ADMIN_EMAILS = ["tori@wdsinc.net", "info@wdsinc.net"];
+
+async function getFirebaseBridge(){
+  // Tiny safety wait in case the module script hasn't finished
+  // initializing yet (shouldn't normally happen — see comment above).
+  for(let i=0;i<50 && !window.__wdsFirebase;i++){
+    await new Promise(r=>setTimeout(r,40));
+  }
+  if(!window.__wdsFirebase) throw new Error("Firebase failed to load");
+  return window.__wdsFirebase;
+}
 
 /* ---------------- QUESTION DEFINITIONS ---------------- */
 
@@ -273,14 +321,17 @@ function tierFor(score, disqualified){
   return "strong";
 }
 
-/* ---------------- STORAGE (Google Sheets via Apps Script) ---------------- */
+/* ---------------- STORAGE (Firebase Firestore) ---------------- */
 //
-// Backed by a Google Apps Script Web App (see GOOGLE_SHEETS_SETUP.md) that
-// appends rows to a Sheet on save, and returns all rows as JSON on list.
-// If SHEETS_WEBAPP_URL isn't configured yet, or the request fails, the
-// record is stashed in localStorage under LOCAL_BACKUP_KEY so nothing is
-// silently lost — check there and re-submit manually via the Apps Script
-// URL if you ever see a save failure.
+// Applicants can create documents but never read them (enforced by the
+// Firestore security rules in FIREBASE_SETUP.md — anyone can view this
+// page's source, so the real access boundary has to live server-side,
+// not in this file). Admin reads go through the same rules, gated on
+// the signed-in Google account being in ALLOWED_ADMIN_EMAILS.
+//
+// If the Firestore write fails (offline, misconfigured project, etc.)
+// the record is stashed in localStorage under LOCAL_BACKUP_KEY so
+// nothing is silently lost.
 
 const LOCAL_BACKUP_KEY = "wds_unsaved_applications";
 
@@ -293,34 +344,21 @@ function stashLocalBackup(record){
 }
 
 async function saveApplication(record){
-  if(!SHEETS_WEBAPP_URL){
-    console.error("SHEETS_WEBAPP_URL not configured — saving to local backup only.");
-    stashLocalBackup(record);
-    return;
-  }
   try{
-    const res = await fetch(SHEETS_WEBAPP_URL, {
-      method: "POST",
-      headers: {"Content-Type":"text/plain"}, // avoids an Apps Script CORS preflight
-      body: JSON.stringify({key: SHEETS_SHARED_KEY, action: "save", record})
-    });
-    const data = await res.json();
-    if(!data || !data.ok) throw new Error((data && data.error) || "unknown save error");
+    const fb = await getFirebaseBridge();
+    await fb.saveApplication(record);
   }catch(e){
-    console.error("sheets save failed, using local backup", e);
+    console.error("firestore save failed, using local backup", e);
     stashLocalBackup(record);
   }
 }
 
 async function loadAllApplications(){
-  if(!SHEETS_WEBAPP_URL) return [];
   try{
-    const res = await fetch(`${SHEETS_WEBAPP_URL}?key=${encodeURIComponent(SHEETS_SHARED_KEY)}&action=list`);
-    const data = await res.json();
-    if(!data || !data.ok || !Array.isArray(data.records)) return [];
-    return data.records;
+    const fb = await getFirebaseBridge();
+    return await fb.loadApplications();
   }catch(e){
-    console.error("sheets list failed", e);
+    console.error("firestore list failed", e);
     return [];
   }
 }
@@ -694,15 +732,25 @@ function App(){
 /* ---------------- ADMIN ---------------- */
 
 function AdminApp({onBack}){
-  const [unlocked, setUnlocked] = useState(false);
-  const [pass, setPass] = useState("");
-  const [gateErr, setGateErr] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [user, setUser] = useState(null);
+  const [signInErr, setSignInErr] = useState("");
   const [apps, setApps] = useState(null);
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
 
+  const authorized = user && ALLOWED_ADMIN_EMAILS.includes(user.email);
+
   useEffect(()=>{
-    if(unlocked){
+    let unsub = ()=>{};
+    getFirebaseBridge().then(fb=>{
+      unsub = fb.onAuthChange(u=>{ setUser(u); setAuthChecked(true); });
+    }).catch(e=>{ console.error(e); setAuthChecked(true); });
+    return ()=>unsub();
+  },[]);
+
+  useEffect(()=>{
+    if(authorized){
       loadAllApplications().then(list=>{
         let backup = [];
         try{ backup = JSON.parse(localStorage.getItem(LOCAL_BACKUP_KEY) || "[]"); }catch(e){}
@@ -712,21 +760,46 @@ function AdminApp({onBack}){
         setApps(all);
       });
     }
-  },[unlocked]);
+  },[authorized]);
 
-  if(!unlocked){
+  async function doSignIn(){
+    setSignInErr("");
+    try{
+      const fb = await getFirebaseBridge();
+      await fb.signInWithGoogle();
+    }catch(e){ setSignInErr("Sign-in failed. Try again."); console.error(e); }
+  }
+  async function doSignOut(){
+    const fb = await getFirebaseBridge();
+    await fb.signOutAdmin();
+  }
+
+  if(!authChecked){
+    return h("div",{className:"admin-wrap"}, h("div",{className:"empty-state"},"Checking sign-in…"));
+  }
+
+  if(!user){
     return h("div",{className:"admin-wrap"},
       h("div",{className:"gate"},
         h("h2",{style:{marginBottom:"18px"}},"Admin access"),
-        h("input",{type:"password",value:pass,placeholder:"Passcode",
-          onChange:e=>{setPass(e.target.value);setGateErr(false);}}),
-        gateErr && h("div",{className:"error",style:{marginBottom:"12px"}},"Wrong passcode."),
-        h("button",{className:"btn-primary",style:{width:"100%"},
-          onClick:()=>{ if(pass===ADMIN_PASSCODE) setUnlocked(true); else setGateErr(true); }
-        },"Enter"),
+        h("p",{style:{fontSize:"13px",opacity:0.65,marginBottom:"18px"}},"Sign in with an approved WDS Google account to view applications."),
+        signInErr && h("div",{className:"error",style:{marginBottom:"12px"}},signInErr),
+        h("button",{className:"btn-primary",style:{width:"100%"},onClick:doSignIn},"Sign in with Google"),
         h("div",{style:{marginTop:"16px"}},
           h("button",{className:"admin-link",onClick:onBack},"← back to application form")
         )
+      )
+    );
+  }
+
+  if(!authorized){
+    return h("div",{className:"admin-wrap"},
+      h("div",{className:"gate"},
+        h("h2",{style:{marginBottom:"18px"}},"Not authorized"),
+        h("p",{style:{fontSize:"13px",opacity:0.65,marginBottom:"18px"}},
+          `${user.email} isn't on the admin list for this dashboard.`),
+        h("button",{className:"btn-ghost",style:{width:"100%",marginBottom:"10px"},onClick:doSignOut},"Sign out"),
+        h("div",null, h("button",{className:"admin-link",onClick:onBack},"← back to application form"))
       )
     );
   }
@@ -757,14 +830,14 @@ function AdminApp({onBack}){
   }
 
   return h("div",{className:"admin-wrap"},
-    !SHEETS_WEBAPP_URL && h("div",{className:"flagrow",style:{marginBottom:"20px"}},
-      h("strong",null,"Not connected: "),
-      "SHEETS_WEBAPP_URL is blank, so this is only showing local-backup entries from this browser. Follow careers/GOOGLE_SHEETS_SETUP.md to connect the real Sheet."
-    ),
     h("div",{className:"admin-header"},
-      h("h2",null,"Applications"),
+      h("div",null,
+        h("h2",null,"Applications"),
+        h("p",{style:{fontSize:"12px",opacity:0.55,marginTop:"2px"}}, `Signed in as ${user.email}`)
+      ),
       h("div",{style:{display:"flex",gap:"10px"}},
         h("button",{className:"btn-ghost",onClick:exportCSV},"Export CSV"),
+        h("button",{className:"btn-ghost",onClick:doSignOut},"Sign out"),
         h("button",{className:"btn-ghost",onClick:onBack},"Back to form")
       )
     ),
