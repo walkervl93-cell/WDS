@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="container">
       <div class="footer-grid">
         <div>
-          <img class="footer-logo" src="${root}assets/images/wds-logo-white.svg" alt="WDS Inc"/>
+          <img class="footer-logo" src="${root}assets/images/wds-logo-white.png" alt="WDS Inc"/>
           <p>Our mission is to provide our customers with a single destination for their project needs while being prompt, doing the job right the first time, &amp; standing behind our work.</p>
         </div>
         <div>
