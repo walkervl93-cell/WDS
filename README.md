@@ -18,17 +18,27 @@ injected by `js/footer.js` so it only has to be edited in one place.
 All page copy is pulled directly from the live wdsinc.net content (hero,
 services, company history, reputation, safety/vetting, contact info).
 
+## Photo placement
+
+Five stock/project photos are placed across Home and Services (one use each,
+spread out rather than repeated):
+
+- `AdobeStock_293634819` (open-floor construction interior) — Home hero background
+- `pexels-pixabay-159045` (paint/material swatches) — Home "Why Choose Us"
+- `AdobeStock_100864184` (tile install) — Services: Interior Design & Renovation card
+- `AdobeStock_191129045` (janitorial) — Services: Janitorial Services card
+- `AdobeStock_103898262` (torch-down roofing) — Services: Industrial Handyman Services card
+
 ## Still needed before this is launch-ready
 
-**Real assets** — everything below is currently a placeholder box or a
-placeholder SVG wordmark:
+**Real assets** — still placeholder boxes, no matching photo supplied yet:
 
 - `assets/images/wds-logo.svg`, `wds-logo-white.svg` — swap for the real logo export
-- `assets/images/service-tiling.jpg` — interior renovation / tile install photo
-- `assets/images/service-janitorial.jpg` — janitorial services photo
-- `assets/images/service-roofing.jpg` — torch-down roofing photo
-- Hero video or photo for the homepage (`assets/video/` or `assets/images/`)
+- Exterior Design & Renovation photo (Services card)
+- Lawncare & Irrigation photo (Services card)
+- Founder / early-company archive photo (About page)
 - Team headshots for the About page (`about.html` team grid — currently "Name TBD")
+- Hero video, if preferred over the current static hero photo
 - Google Maps embed on the Contact page
 
 **Animated text / motion pass** — `[data-animate]` attributes are already
