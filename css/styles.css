@@ -131,8 +131,17 @@ section{padding:5rem 0;}
 /* ---------- process steps ---------- */
 .steps{counter-reset:step;display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;}
 @media (max-width:800px){.steps{grid-template-columns:1fr;}}
-.step{position:relative;padding-left:3.2rem;}
-.step::before{counter-increment:step;content:counter(step);position:absolute;left:0;top:0;width:2.4rem;height:2.4rem;border-radius:50%;background:var(--red);color:var(--white);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:700;}
+.step{position:relative;padding-left:5.5rem;min-height:4.5rem;display:flex;flex-direction:column;justify-content:center;}
+.step::before{counter-increment:step;content:counter(step);position:absolute;left:0;top:50%;transform:translateY(-50%);width:4.5rem;height:4.5rem;border-radius:50%;background:var(--red);color:var(--white);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:700;font-size:1.75rem;}
+
+/* Staggered entrance: .steps carries data-animate (one observed target),
+   CSS handles the per-item stagger via nth-child so each numbered step
+   animates in, in order. */
+.steps .step{opacity:0;transform:translateY(18px);transition:opacity .5s ease,transform .5s ease;}
+.steps.is-visible .step{opacity:1;transform:translateY(0);}
+.steps.is-visible .step:nth-child(1){transition-delay:0s;}
+.steps.is-visible .step:nth-child(2){transition-delay:.15s;}
+.steps.is-visible .step:nth-child(3){transition-delay:.3s;}
 
 /* ---------- team ---------- */
 .team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;}
@@ -177,9 +186,12 @@ section{padding:5rem 0;}
 .map-frame{margin-top:2rem;border-radius:var(--radius);overflow:hidden;aspect-ratio:16/9;background:#e2e0da;}
 
 /* ---------- CTA band ---------- */
-.cta-band{background:var(--red);color:var(--white);text-align:center;}
-.cta-band h2{margin-bottom:1rem;}
-.cta-band .lede{color:rgba(255,255,255,.9);margin:0 auto 2rem;}
+/* Red as an accent color, not a full-section background — white bg,
+   red heading, red-outlined button. */
+.cta-band{background:var(--white);color:var(--ink);text-align:center;border-top:1px solid #eee;border-bottom:1px solid #eee;}
+.cta-band h2{color:var(--red);margin-bottom:1rem;}
+.cta-band .lede{color:var(--gray-700);margin:0 auto 2rem;}
+.cta-band .btn-outline{color:var(--red);border-color:var(--red);}
 
 /* ---------- footer ---------- */
 .site-footer{background:var(--black);color:rgba(255,255,255,.8);padding:4rem 0 2rem;}
