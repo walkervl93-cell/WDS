@@ -74,8 +74,14 @@ h3{font-size:1.15rem;}
    inline-block to the individual word/char spans it generates inside
    these elements, not to the elements themselves. */
 
-.page-hero{background:var(--black);color:var(--white);padding:5rem 0 4rem;}
+.page-hero{position:relative;overflow:hidden;background:var(--black);color:var(--white);padding:5rem 0 4rem;}
 .page-hero p.lede{color:rgba(255,255,255,.75);}
+.page-hero .container{position:relative;z-index:1;}
+/* Optional background photo for page-hero sections (Services, Careers).
+   Same dark-overlay treatment as the home hero so text stays readable. */
+.page-hero-media{position:absolute;inset:0;z-index:0;}
+.page-hero-media img{width:100%;height:100%;object-fit:cover;opacity:.4;}
+.page-hero-media::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,16,16,.65),rgba(16,16,16,.9));}
 
 /* ---------- trust bar ---------- */
 .trust-bar{background:var(--gray-100);padding:1.6rem 0;}
