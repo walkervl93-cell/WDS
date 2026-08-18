@@ -94,6 +94,12 @@ h3{font-size:1.15rem;}
 section{padding:5rem 0;}
 .section-head{max-width:680px;margin-bottom:3rem;}
 .section-head.center{margin-left:auto;margin-right:auto;text-align:center;}
+/* .lede has its own max-width (60ch), narrower than most centered
+   parents. text-align:center only centers inline text, not this
+   block's own box, so without this it sits flush-left, visibly off-
+   center under a wider heading. Centers the box itself wherever it's
+   inside any .center-class ancestor. */
+.center .lede{margin-left:auto;margin-right:auto;}
 .bg-dark{background:var(--black);color:var(--white);}
 .bg-dark .lede{color:rgba(255,255,255,.75);}
 .bg-light{background:var(--gray-100);}
