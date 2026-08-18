@@ -1,15 +1,21 @@
 # Job Application Backend — Firebase
 
-`careers/apply.html` uses Firebase (project `wds-jobs`) for three things:
+`careers/apply.html` uses Firebase (project `wds-jobs`) for two things:
 
-1. **Firestore** — stores every submitted application in an `applications`
-   collection.
+1. **Firestore** — stores every submitted application, including the
+   resume, in an `applications` collection.
 2. **Firebase Auth (Google Sign-In)** — gates the admin dashboard
    (`careers/apply.html#admin`) so only approved Google accounts can read
    applicant data.
-3. **Firebase Storage** — holds uploaded resumes. Applicants can upload
-   but never read them back; only admins can open one, and only on
-   demand from the dashboard.
+
+Resumes are stored as base64 text directly on the Firestore document
+rather than in Firebase Storage — Storage now requires the paid Blaze
+plan, and this keeps everything on the free Spark plan. The tradeoff:
+Firestore documents cap out at 1MB, and base64 inflates a file by ~33%,
+so resumes are capped at 700KB client-side (`MAX_RESUME_BYTES` in
+`apply.html`). A plain-text PDF or Word doc resume is almost always
+well under that; it only becomes a problem for a resume that's a
+scanned image or has heavy embedded graphics.
 
 The web app config (`apiKey`, `authDomain`, etc., near the top of
 `apply.html`) is safe to be public — it just tells the browser which
@@ -62,48 +68,20 @@ service cloud.firestore {
 
 3. Click **Publish**.
 
-## Also needed: enable Storage + publish its rules (for resumes)
-
-1. Firebase console → your project → left sidebar → **Build → Storage** →
-   **Get started** (accept the default bucket location)
-2. Go to the **Rules** tab on that same Storage page, replace the default
-   with:
-
-```
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /resumes/{position}/{fileName} {
-      // Applicants can upload (size-capped at 10MB), but never read
-      // resumes back — only admins can.
-      allow write: if request.resource.size < 10 * 1024 * 1024;
-
-      allow read: if request.auth != null
-                  && request.auth.token.email_verified == true
-                  && request.auth.token.email in [
-                       "tori@wdsinc.net",
-                       "info@wdsinc.net"
-                     ];
-    }
-  }
-}
-```
-
-3. Click **Publish**.
-
-Without this, resume uploads will fail (falling back to a "Resume upload
-failed — applicant should be asked to resend" flag on the application —
-the rest of the application still saves fine either way, so a resume
-hiccup never loses the whole submission).
+That's the only rules file needed — no Firebase Storage, no Blaze plan.
+If reading a resume ever fails client-side (corrupt file, browser quirk),
+the rest of the application still saves fine — a resume hiccup never
+loses the whole submission, it's just flagged "couldn't be attached" so
+you know to ask the applicant to resend.
 
 ## Adding or removing admins
 
-Three places have to stay in sync:
+Two places have to stay in sync:
 
 - `ALLOWED_ADMIN_EMAILS` near the top of `careers/apply.html` (controls
   what the UI shows/hides)
-- The `email in [...]` list in the Firestore rules (applications)
-- The `email in [...]` list in the Storage rules (resumes)
+- The `email in [...]` list in the Firestore rules above (the actual
+  enforcement)
 
 Only Google accounts already signed in with Google can be admins — there's
 no separate password to manage. If someone leaves or shouldn't have

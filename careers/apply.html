@@ -179,8 +179,6 @@ tr:hover td{background:var(--paper-dim);}
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, collection, addDoc, getDocs, query, orderBy }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBUGM7_d08GixZbA1HOW1vCVtIhsGp9l_4",
@@ -194,7 +192,6 @@ tr:hover td{background:var(--paper-dim);}
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const storage = getStorage(app);
 
   window.__wdsFirebase = {
     onAuthChange: (cb) => onAuthStateChanged(auth, cb),
@@ -206,20 +203,6 @@ tr:hover td{background:var(--paper-dim);}
     loadApplications: async () => {
       const snap = await getDocs(query(collection(db, "applications"), orderBy("submittedAt", "desc")));
       return snap.docs.map(d => d.data());
-    },
-    // Applicants can upload but not read back (storage rules mirror the
-    // Firestore ones). Returns the storage path, not a public URL — the
-    // admin dashboard resolves a real download URL on demand, which only
-    // works while signed in as an allowlisted admin.
-    uploadResume: async (file, position) => {
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const path = `resumes/${position}/${Date.now()}_${safeName}`;
-      const fileRef = ref(storage, path);
-      await uploadBytes(fileRef, file, { contentType: file.type || "application/octet-stream" });
-      return path;
-    },
-    getResumeUrl: async (path) => {
-      return await getDownloadURL(ref(storage, path));
     }
   };
 </script>
@@ -231,6 +214,21 @@ const WEB3FORMS_KEY = "31a25319-e8cf-4c19-b6f2-1c2579702287";
 // the Firestore security rules (see FIREBASE_SETUP.md) — this array only
 // controls what the UI shows; it is not itself a security boundary.
 const ALLOWED_ADMIN_EMAILS = ["tori@wdsinc.net", "info@wdsinc.net"];
+
+// Resumes are stored inline on the Firestore document (no Firebase
+// Storage — that requires the paid Blaze plan). Firestore documents cap
+// out at 1MB total, and base64 inflates a file by ~33%, so this leaves
+// headroom for the rest of the application's fields in the same doc.
+const MAX_RESUME_BYTES = 700 * 1024;
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1] || "");
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 async function getFirebaseBridge(){
   // Tiny safety wait in case the module script hasn't finished
@@ -393,9 +391,9 @@ async function notifyByEmail(record){
     "Phone": record.phone,
     "Email": record.email,
     "Reference": record.reference ? [record.reference.name, record.reference.phone, record.reference.email].filter(Boolean).join(" · ") : "None",
-    "Resume": record.resumePath ? (record.resumeFileName || "attached") : "Not attached",
+    "Resume": record.resumeBase64 ? (record.resumeFileName || "attached") : "Not attached",
     "Flags": record.flags.length ? record.flags.join("; ") : "None",
-    "message": `${record.name} applied for ${record.positionLabel}.\n\nScore: ${record.score}/100 (${record.tierLabel})\nPhone: ${record.phone}\nEmail: ${record.email}\n\nReference: ${record.reference ? [record.reference.name, record.reference.phone, record.reference.email].filter(Boolean).join(" · ") : "None"}\nResume: ${record.resumePath ? (record.resumeFileName || "attached") : "Not attached"}\n\nFlags:\n${record.flags.length ? record.flags.map(f=>"- "+f).join("\n") : "None"}\n\nFull answers, including the resume, are in the application dashboard.`
+    "message": `${record.name} applied for ${record.positionLabel}.\n\nScore: ${record.score}/100 (${record.tierLabel})\nPhone: ${record.phone}\nEmail: ${record.email}\n\nReference: ${record.reference ? [record.reference.name, record.reference.phone, record.reference.email].filter(Boolean).join(" · ") : "None"}\nResume: ${record.resumeBase64 ? (record.resumeFileName || "attached") : "Not attached"}\n\nFlags:\n${record.flags.length ? record.flags.map(f=>"- "+f).join("\n") : "None"}\n\nFull answers, including the resume, are in the application dashboard.`
   };
   try{
     const res = await fetch("https://api.web3forms.com/submit", {
@@ -519,6 +517,7 @@ function App(){
       if(!(answers.refPhone||"").trim()) req.refPhone = "Enter a reference phone number.";
       if(!(answers.refEmail||"").trim()) req.refEmail = "Enter a reference email address.";
       if(!answers.resumeFile) req.resumeFile = "Attach your resume.";
+      else if(answers.resumeFile.size > MAX_RESUME_BYTES) req.resumeFile = "That file's too big (700KB max) — try a plain PDF or Word doc without embedded images/scans.";
     }
     setErrors(req);
     return Object.keys(req).length === 0;
@@ -529,23 +528,24 @@ function App(){
     setSubmitting(true);
     setSubmitErr("");
 
-    let resumePath = null;
+    let resumeBase64 = null;
     let resumeFileName = null;
+    let resumeMimeType = null;
     let resumeUploadFailed = false;
     if(answers.resumeFile){
       resumeFileName = answers.resumeFile.name;
+      resumeMimeType = answers.resumeFile.type || "application/octet-stream";
       try{
-        const fb = await getFirebaseBridge();
-        resumePath = await fb.uploadResume(answers.resumeFile, position);
+        resumeBase64 = await fileToBase64(answers.resumeFile);
       }catch(e){
-        console.error("resume upload failed", e);
+        console.error("resume read failed", e);
         resumeUploadFailed = true;
       }
     }
 
     const result = position === "handyman" ? scoreHandyman(answers) : scoreIrrigation(answers);
     const flags = [...result.flags];
-    if(resumeUploadFailed) flags.push("Resume upload failed — applicant should be asked to resend");
+    if(resumeUploadFailed) flags.push("Resume couldn't be attached — applicant should be asked to resend");
     const tierLabel = {strong:"Strong Match", possible:"Possible Match", reject:"Not Qualified"}[tierFor(result.score, result.disqualified)];
 
     // Strip the raw File object out of answers before saving — Firestore
@@ -557,7 +557,7 @@ function App(){
       positionLabel: position==="handyman" ? "General Handyman (West Point)" : "Irrigation Technician (Chesterfield/Tri-Cities)",
       name: answers.name, phone: answers.phone, email: answers.email,
       reference: { name: answers.refName, phone: answers.refPhone, email: answers.refEmail },
-      resumePath, resumeFileName,
+      resumeBase64, resumeFileName, resumeMimeType,
       answers: answersWithoutFile,
       score: result.score,
       disqualified: result.disqualified,
@@ -790,7 +790,7 @@ function App(){
         ),
         h("div",{className:"q"},
           h("label",{className:"qtitle"},"Resume"),
-          h("div",{className:"hint"},"PDF, Word doc, or image of a printed resume — up to 10MB."),
+          h("div",{className:"hint"},"PDF or Word doc, plain text/no scanned images — up to 700KB."),
           h("input",{type:"file",accept:".pdf,.doc,.docx,image/*",
             onChange:e=>set("resumeFile", e.target.files && e.target.files[0] ? e.target.files[0] : null)}),
           answers.resumeFile && h("div",{style:{fontSize:"12.5px",marginTop:"6px",opacity:0.7}}, `Selected: ${answers.resumeFile.name}`),
@@ -905,7 +905,7 @@ function AdminApp({onBack}){
       const ref = a.reference || {};
       rows.push([a.name,a.positionLabel,a.score,a.tierLabel,a.phone,a.email,
         ref.name||"", ref.phone||"", ref.email||"",
-        a.resumePath ? (a.resumeFileName || "on file") : "none",
+        a.resumeBase64 ? (a.resumeFileName || "on file") : "none",
         (a.flags||[]).join(" | "), new Date(a.submittedAt).toLocaleString()]);
     });
     const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
@@ -955,9 +955,7 @@ function AdminApp({onBack}){
 }
 
 function DetailOverlay({app,onClose}){
-  const [resumeUrl, setResumeUrl] = useState(null);
   const [resumeErr, setResumeErr] = useState("");
-  const [resumeLoading, setResumeLoading] = useState(false);
 
   const labels = {
     years:"Years of experience", tools:"Own tools/transportation", commercial:"Commercial/industrial experience",
@@ -967,19 +965,14 @@ function DetailOverlay({app,onClose}){
     independence:"Independence rating (1-5)", certification:"Certification", bookOfBusiness:"Managed own route before"
   };
 
-  async function loadResume(){
-    setResumeLoading(true);
+  function loadResume(){
     setResumeErr("");
     try{
-      const fb = await getFirebaseBridge();
-      const url = await fb.getResumeUrl(app.resumePath);
-      setResumeUrl(url);
+      const url = `data:${app.resumeMimeType || "application/octet-stream"};base64,${app.resumeBase64}`;
       window.open(url, "_blank", "noopener");
     }catch(e){
       console.error(e);
-      setResumeErr("Couldn't load resume. Try again.");
-    }finally{
-      setResumeLoading(false);
+      setResumeErr("Couldn't open resume.");
     }
   }
 
@@ -1001,13 +994,13 @@ function DetailOverlay({app,onClose}){
       ),
       h("div",{className:"detail-row"},
         h("div",{className:"qk"},"Resume"),
-        app.resumePath
+        app.resumeBase64
           ? h("div",{className:"qv"},
-              h("button",{className:"btn-ghost",style:{padding:"6px 12px",fontSize:"12px"},disabled:resumeLoading,onClick:loadResume},
-                resumeLoading ? "Loading…" : `Open ${app.resumeFileName || "resume"}`),
+              h("button",{className:"btn-ghost",style:{padding:"6px 12px",fontSize:"12px"},onClick:loadResume},
+                `Open ${app.resumeFileName || "resume"}`),
               resumeErr && h("div",{className:"error",style:{marginTop:"6px"}},resumeErr)
             )
-          : h("div",{className:"qv",style:{opacity:0.5}}, app.resumeFileName ? "Upload failed — ask applicant to resend" : "Not provided")
+          : h("div",{className:"qv",style:{opacity:0.5}}, app.resumeFileName ? "Couldn't be attached — ask applicant to resend" : "Not provided")
       ),
       Object.keys(labels).map(k=>{
         const v = app.answers[k];
