@@ -58,6 +58,10 @@ h3{font-size:1.15rem;}
   .nav.open{transform:translateX(0);}
   .nav-toggle{display:block;}
   .header-phone{display:none;}
+  /* Tighter to the text — was wrapping to two lines with too much
+     padding around it on narrow screens. Same font-size, just less
+     breathing room in the box. */
+  .header-cta .btn{white-space:nowrap;padding:.5rem .9rem;}
 }
 
 /* ---------- hero ---------- */
