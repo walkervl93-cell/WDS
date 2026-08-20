@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /careers/apply.html
+
+Sitemap: https://wdsinc.net/sitemap.xml
