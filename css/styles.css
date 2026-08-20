@@ -195,6 +195,10 @@ section{padding:5rem 0;}
 /* ---------- badges (reputation) ---------- */
 .badge-row{display:flex;flex-wrap:wrap;gap:1rem;margin-top:1.5rem;}
 .badge{border:1px solid #ddd;border-radius:20px;padding:.5rem 1rem;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--gray-700);}
+/* Dark-gray text on a light border reads fine on white, but was
+   nearly illegible on .bg-dark sections (Safety & Vetting, Our
+   Projects) — same fix pattern as .bg-dark .lede. */
+.bg-dark .badge{color:rgba(255,255,255,.75);border-color:rgba(255,255,255,.3);}
 
 /* ---------- careers / job board ---------- */
 .job-list{display:flex;flex-direction:column;gap:1rem;}
@@ -231,7 +235,10 @@ section{padding:5rem 0;}
 /* ---------- CTA band ---------- */
 /* Red as an accent color, not a full-section background — white bg,
    red heading, red-outlined button. */
-.cta-band{background:var(--white);color:var(--ink);text-align:center;border-top:1px solid #eee;border-bottom:1px solid #eee;}
+/* Light gray, not white — the section above (Committed to Customer
+   Satisfaction) is already white, and two white sections back to back
+   read as one big awkward gap with nothing to mark the seam. */
+.cta-band{background:var(--gray-100);color:var(--ink);text-align:center;}
 .cta-band h2{color:var(--red);margin-bottom:1rem;}
 .cta-band .lede{color:var(--gray-700);margin:0 auto 2rem;}
 .cta-band .btn-outline{color:var(--red);border-color:var(--red);}
